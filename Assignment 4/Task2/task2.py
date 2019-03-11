@@ -16,8 +16,24 @@ def calculate_iou(prediction_box, gt_box):
         returns:
             float: value of the intersection of union for the two boxes.
     """
-    # YOUR CODE HERE
-    raise NotImplementedError
+    if prediction_box[0] >= gt_box[2] or \
+       prediction_box[2] <= gt_box[0] or \
+       prediction_box[1] >= gt_box[3] or \
+       prediction_box[3] <= gt_box[1]: return 0
+
+    
+    x = min(prediction_box[2], gt_box[2]) - max(prediction_box[0], gt_box[0])
+    y = min(prediction_box[3], gt_box[3]) - max(prediction_box[1], gt_box[1])
+
+    intersection = x*y
+
+    union = (prediction_box[2] - prediction_box[0])*(prediction_box[3] - prediction_box[1]) + \
+            (gt_box[2] - gt_box[0])*(gt_box[3] - gt_box[1]) - intersection
+
+    iou = intersection/union
+
+    return iou
+   
 
 def calculate_precision(num_tp, num_fp, num_fn):
     """ Calculates the precision for the given parameters.
@@ -30,7 +46,8 @@ def calculate_precision(num_tp, num_fp, num_fn):
     Returns:
         float: value of precision
     """
-    raise NotImplementedError
+    if num_tp + num_fp == 0: return 1
+    return num_tp / (num_tp + num_fp)
 
 
 def calculate_recall(num_tp, num_fp, num_fn):
@@ -43,7 +60,8 @@ def calculate_recall(num_tp, num_fp, num_fn):
     Returns:
         float: value of recall
     """
-    raise NotImplementedError
+    if num_tp + num_fn == 0: return 0
+    return num_tp / (num_tp + num_fn)
 
 
 def get_all_box_matches(prediction_boxes, gt_boxes, iou_threshold):
@@ -66,6 +84,12 @@ def get_all_box_matches(prediction_boxes, gt_boxes, iou_threshold):
             objects with shape: [number of box matches, 4].
             Each row includes [xmin, ymin, xmax, ymax]
     """
+    matches = []
+    for p in prediction_boxes:
+        for gt in gt_boxes:
+            iou = calculate_iou(p, gt)
+            if iou >= iou_threshold:
+                matches.append((gt,p,iou))
     # Find all possible matches with a IoU >= iou threshold
 
     # Sort all matches on IoU in descending order
