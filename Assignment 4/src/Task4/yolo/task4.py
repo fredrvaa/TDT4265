@@ -98,13 +98,38 @@ def yolo_non_max_suppression(scores, boxes, classes, max_boxes = 10, iou_thresho
     Note also that this function will transpose the shapes of scores, boxes, classes. 
     This is made for convenience.
     """
-        
+    sorted_indeces = scores.argsort()[::-1]
+
+    sorted_scores = scores[sorted_indeces]
+    sorted_boxes = boxes[sorted_indeces]
+    sorted_classes = classes[sorted_indeces]
+
     nms_indices = []
+    checked_boxes_indices = []
+
     # Use iou() to get the list of indices corresponding to boxes you keep
-    
+    for index, highest_box in enumerate(sorted_boxes):
+        if index in checked_boxes_indices:
+            continue
+
+        nms_indices.append(index)
+
+        if len(nms_indices) == max_boxes:
+            break
+
+        for box_index, box in enumerate(sorted_boxes[index+1:]):
+            if iou(highest_box, box) >= iou_threshold:
+                checked_boxes_indices.append(index+box_index+1)
+
     # Use index arrays to select only nms_indices from scores, boxes and classes
-    
+    scores = sorted_scores[nms_indices]
+    boxes = sorted_boxes[nms_indices]
+    classes = sorted_classes[nms_indices]
+
     return scores, boxes, classes
+
+    
+    
 
 def yolo_eval(yolo_outputs, image_shape = (720., 1280.), max_boxes=10, score_threshold=.6, iou_threshold=.5):
     """
@@ -142,7 +167,7 @@ def yolo_eval(yolo_outputs, image_shape = (720., 1280.), max_boxes=10, score_thr
     
     return scores, boxes, classes
 
-print("----TEST TO SEE EXPECTED OUTPUT TASK 4a)----")
+print("----TEST TO SEE EXPECTED OUTPUT TASK 4a) | yolo_filter_boxes----")
 #DO NOT EDIT THIS CODE
 np.random.seed(0)
 box_confidence = np.random.normal(size=(19, 19, 5, 1), loc=1, scale=4)
@@ -156,13 +181,19 @@ print("scores.shape = " + str(scores.shape))
 print("boxes.shape = " + str(boxes.shape))
 print("classes.shape = " + str(classes.shape))
 
-print("----TEST TO SEE EXPECTED OUTPUT TASK 4b)----")
+print("----TEST TO SEE EXPECTED OUTPUT TASK 4b) | iou----")
+
 #DO NOT EDIT THIS CODE
 box1 = (2, 1, 4, 3)
 box2 = (1, 2, 3, 4) 
 print("iou = " + str(iou(box1, box2)))
 
-print("----TEST TO SEE EXPECTED OUTPUT TASK 4c)----")
+print("--------------------------------------------------------")
+
+
+
+print("----TEST TO SEE EXPECTED OUTPUT TASK 4b) | yolo_non_max_suppression----")
+
 #DO NOT EDIT THIS CODE
 np.random.seed(0)
 scores = np.random.normal(size=(54,), loc=1, scale=4)
@@ -175,6 +206,12 @@ print("classes[2] = " + str(classes[2]))
 print("scores.shape = " + str(scores.shape))
 print("boxes.shape = " + str(boxes.shape))
 print("classes.shape = " + str(classes.shape))
+
+print("--------------------------------------------------------")
+
+
+
+print("----TEST TO SEE EXPECTED OUTPUT TASK 4c) | yolo_eval----")
 
 #DO NOT EDIT THIS CODE
 np.random.seed(0)
@@ -189,12 +226,16 @@ print("scores.shape = " + str(scores.shape))
 print("boxes.shape = " + str(boxes.shape))
 print("classes.shape = " + str(classes.shape))
 
+print("--------------------------------------------------------")
+
 # DO NOT CHANGE
 image = Image.open("test.jpg")
 box_confidence = np.load("box_confidence.npy")
 boxes = np.load("boxes.npy")
 box_class_probs = np.load("box_class_probs.npy")
 yolo_outputs = (box_confidence, boxes, box_class_probs)
+
+
 
 # DO NOT CHANGE
 image_shape = (720., 1280.)
