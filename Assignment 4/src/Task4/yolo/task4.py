@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 from matplotlib.pyplot import imshow
 from drawing_utils import read_classes, draw_boxes, scale_boxes
+import matplotlib.pyplot as plt
 
 # GRADED FUNCTION: yolo_filter_boxes
 
@@ -57,23 +58,23 @@ def iou(prediction_box, gt_box):
     box2 -- second box, list object with coordinates (x1, y1, x2, y2)
     """
 
-    #Used supplied code from https://gist.github.com/hukkelas/74f0420e64309a46f9751629dda710da
-    #as this gives correct output.
+    # Modified supplied code from https://gist.github.com/hukkelas/74f0420e64309a46f9751629dda710da
+    # as this gives correct output.
 
     # Calculate the (y1, x1, y2, x2) coordinates of the intersection of box1 and box2. Calculate its Area.
-    xi1 = max(box1[0], box2[0])
-    yi1 = max(box1[1], box2[1])
-    xi2 = min(box1[2], box2[2])
-    yi2 = min(box1[3], box2[3])
+    xi1 = max(prediction_box[0], gt_box[0])
+    yi1 = max(prediction_box[1], gt_box[1])
+    xi2 = min(prediction_box[2], gt_box[2])
+    yi2 = min(prediction_box[3], gt_box[3])
     inter_area = (xi2 - xi1)*(yi2 - yi1)
 
     # Calculate the Union area by using Formula: Union(A,B) = A + B - Inter(A,B)
-    box1_area = (box1[3] - box1[1])*(box1[2]- box1[0])
-    box2_area = (box2[3] - box2[1])*(box2[2]- box2[0])
+    box1_area = (prediction_box[3] - prediction_box[1])*(prediction_box[2]- prediction_box[0])
+    box2_area = (gt_box[3] - gt_box[1])*(gt_box[2]- gt_box[0])
     union_area = (box1_area + box2_area) - inter_area
     
-    # compute the IoU
-    iou = inter_area / union_area
+    # Compute iou
+    iou = inter_area / float(union_area)
 
     return iou
 
@@ -98,7 +99,8 @@ def yolo_non_max_suppression(scores, boxes, classes, max_boxes = 10, iou_thresho
     Note also that this function will transpose the shapes of scores, boxes, classes. 
     This is made for convenience.
     """
-    sorted_indeces = scores.argsort()[::-1]
+
+    sorted_indeces = (-scores).argsort()
 
     sorted_scores = scores[sorted_indeces]
     sorted_boxes = boxes[sorted_indeces]
@@ -108,18 +110,18 @@ def yolo_non_max_suppression(scores, boxes, classes, max_boxes = 10, iou_thresho
     checked_boxes_indices = []
 
     # Use iou() to get the list of indices corresponding to boxes you keep
-    for index, highest_box in enumerate(sorted_boxes):
+    for index, curr_box in enumerate(sorted_boxes):
         if index in checked_boxes_indices:
             continue
-
+        
         nms_indices.append(index)
 
         if len(nms_indices) == max_boxes:
             break
 
-        for box_index, box in enumerate(sorted_boxes[index+1:]):
-            if iou(highest_box, box) >= iou_threshold:
-                checked_boxes_indices.append(index+box_index+1)
+        for box_index, box in enumerate(sorted_boxes[index:]):
+            if iou(curr_box, box) >= iou_threshold:
+                checked_boxes_indices.append(index+box_index)
 
     # Use index arrays to select only nms_indices from scores, boxes and classes
     scores = sorted_scores[nms_indices]
@@ -127,8 +129,6 @@ def yolo_non_max_suppression(scores, boxes, classes, max_boxes = 10, iou_thresho
     classes = sorted_classes[nms_indices]
 
     return scores, boxes, classes
-
-    
     
 
 def yolo_eval(yolo_outputs, image_shape = (720., 1280.), max_boxes=10, score_threshold=.6, iou_threshold=.5):
@@ -156,18 +156,25 @@ def yolo_eval(yolo_outputs, image_shape = (720., 1280.), max_boxes=10, score_thr
     ### START CODE HERE ### 
     
     # Retrieve outputs of the YOLO model (≈1 line)
+    box_confidence, boxes, box_class_probs = yolo_outputs
         
     # Use one of the functions you've implemented to perform Score-filtering with a threshold of score_threshold (≈1 line)
-    
+    scores, boxes, classes = yolo_filter_boxes(box_confidence, boxes, box_class_probs, score_threshold)
+
     # Scale boxes back to original image shape.
+    boxes = scale_boxes(boxes, image_shape)
 
     # Use one of the functions you've implemented to perform Non-max suppression with a threshold of iou_threshold (≈1 line)
-    
+    scores, boxes, classes = yolo_non_max_suppression(scores, boxes, classes, max_boxes, iou_threshold)
+
     ### END CODE HERE ###
     
     return scores, boxes, classes
 
-print("----TEST TO SEE EXPECTED OUTPUT TASK 4a) | yolo_filter_boxes----")
+print("-----------------------------------------------------------------------")
+print("-------TEST TO SEE EXPECTED OUTPUT TASK 4a) | yolo_filter_boxes--------")
+print("-----------------------------------------------------------------------")
+
 #DO NOT EDIT THIS CODE
 np.random.seed(0)
 box_confidence = np.random.normal(size=(19, 19, 5, 1), loc=1, scale=4)
@@ -181,18 +188,21 @@ print("scores.shape = " + str(scores.shape))
 print("boxes.shape = " + str(boxes.shape))
 print("classes.shape = " + str(classes.shape))
 
-print("----TEST TO SEE EXPECTED OUTPUT TASK 4b) | iou----")
+
+print("-----------------------------------------------------------------------")
+print("-------------TEST TO SEE EXPECTED OUTPUT TASK 4b) | iou----------------")
+print("-----------------------------------------------------------------------")
 
 #DO NOT EDIT THIS CODE
 box1 = (2, 1, 4, 3)
 box2 = (1, 2, 3, 4) 
 print("iou = " + str(iou(box1, box2)))
 
-print("--------------------------------------------------------")
 
 
-
+print("-----------------------------------------------------------------------")
 print("----TEST TO SEE EXPECTED OUTPUT TASK 4b) | yolo_non_max_suppression----")
+print("-----------------------------------------------------------------------")
 
 #DO NOT EDIT THIS CODE
 np.random.seed(0)
@@ -207,11 +217,11 @@ print("scores.shape = " + str(scores.shape))
 print("boxes.shape = " + str(boxes.shape))
 print("classes.shape = " + str(classes.shape))
 
-print("--------------------------------------------------------")
 
 
-
-print("----TEST TO SEE EXPECTED OUTPUT TASK 4c) | yolo_eval----")
+print("-----------------------------------------------------------------------")
+print("-----------TEST TO SEE EXPECTED OUTPUT TASK 4c) | yolo_eval------------")
+print("-----------------------------------------------------------------------")
 
 #DO NOT EDIT THIS CODE
 np.random.seed(0)
@@ -226,7 +236,7 @@ print("scores.shape = " + str(scores.shape))
 print("boxes.shape = " + str(boxes.shape))
 print("classes.shape = " + str(classes.shape))
 
-print("--------------------------------------------------------")
+fig = plt.figure()
 
 # DO NOT CHANGE
 image = Image.open("test.jpg")
@@ -235,19 +245,28 @@ boxes = np.load("boxes.npy")
 box_class_probs = np.load("box_class_probs.npy")
 yolo_outputs = (box_confidence, boxes, box_class_probs)
 
-
-
 # DO NOT CHANGE
 image_shape = (720., 1280.)
 
 #DO NOT EDIT THIS CODE
 out_scores, out_boxes, out_classes = yolo_eval(yolo_outputs, image_shape)
 
+print("-----------------------------------------------------------------------")
+print("------------------------Prediction info--------------------------------")
+print("-----------------------------------------------------------------------")
+
 #DO NOT EDIT THIS CODE
 # Print predictions info
 print('Found {} boxes'.format(len(out_boxes)))
+
+print("-----------------------------------------------------------------------")
+
 # Draw bounding boxes on the image
 draw_boxes(image, out_scores, out_boxes, out_classes)
+
 # Display the results in the notebook
-imshow(image)
-import matplotlib.pyplot as plt
+plt.savefig('task4d.eps')
+
+plt.imshow(image)
+plt.show()
+ 
