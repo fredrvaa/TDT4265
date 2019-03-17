@@ -22,10 +22,10 @@ def calculate_iou(prediction_box, gt_box):
        prediction_box[3] <= gt_box[1]: return 0
 
     
-    x = min(prediction_box[2], gt_box[2]) - max(prediction_box[0], gt_box[0])
-    y = min(prediction_box[3], gt_box[3]) - max(prediction_box[1], gt_box[1])
+    x_i = min(prediction_box[2], gt_box[2]) - max(prediction_box[0], gt_box[0])
+    y_i = min(prediction_box[3], gt_box[3]) - max(prediction_box[1], gt_box[1])
 
-    intersection = x*y
+    intersection = x_i * y_i
 
     union = (prediction_box[2] - prediction_box[0])*(prediction_box[3] - prediction_box[1]) + \
             (gt_box[2] - gt_box[0])*(gt_box[3] - gt_box[1]) - intersection
